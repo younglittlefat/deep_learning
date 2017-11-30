@@ -1,3 +1,4 @@
+#encoding=utf-8
 import numpy as np
 import re
 import itertools
@@ -62,4 +63,15 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
         for batch_num in range(num_batches_per_epoch):
             start_index = batch_num * batch_size
             end_index = min((batch_num + 1) * batch_size, data_size)
-            yield shuffled_data[start_index:end_index]
+            now_batch = shuffled_data[start_index:end_index]
+            # 获取batch中每个训练样本的真实长度
+            true_len_list = []
+            for i in range(now_batch.shape[0]):
+                now_data = now_batch[i][0]
+                idx = 0
+                for j in range(len(now_data)):
+                    if now_data[j] == 0:
+                        break
+                    idx += 1
+                true_len_list.append(idx)
+            yield now_batch, true_len_list
