@@ -36,7 +36,13 @@ class SiameseLSTM(object):
 
         with tf.name_scope("bw" + scope), tf.variable_scope("bw" + scope):
             outputs, _, _ = tf.nn.static_bidirectional_rnn(lstm_fw_cell_m, lstm_bw_cell_m, x, dtype=tf.float32)
-        return outputs[-1]
+            # add an fully connection
+            #outputs = tf.layers.dense(inputs=outputs[-1], units=embedding_size, activation=tf.nn.relu)
+            initer = tf.truncated_normal_initializer(stddev=0.01)
+            W = tf.get_variable("W", dtype=tf.float32, shape=[outputs[-1].get_shape()[1], embedding_size], initializer=initer)
+            b = tf.get_variable('b', dtype=tf.float32, initializer=tf.constant(0.01, shape=[embedding_size], dtype=tf.float32))
+            outputs = tf.nn.bias_add(tf.matmul(outputs[-1], W), b)
+        return outputs
 
     def contrastive_loss(self, y, d, batch_size):
         tmp = y * tf.square(d)

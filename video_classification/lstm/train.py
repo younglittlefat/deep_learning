@@ -26,7 +26,7 @@ tf.app.flags.DEFINE_string("training_files", "person_match.train2", "training fi
 tf.app.flags.DEFINE_integer("hidden_units", 512, "Number of hidden units (default:50)")
 
 # Training parameters
-tf.app.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 64)")
+tf.app.flags.DEFINE_integer("batch_size", 256, "Batch Size (default: 64)")
 tf.app.flags.DEFINE_integer("img_feat_dim", 1024, "Feature dimension of images (default: 1024)")
 tf.app.flags.DEFINE_integer("num_epochs", 50, "Number of training epochs (default: 200)")
 tf.app.flags.DEFINE_integer("evaluate_every", 50, "Evaluate model on dev set after this many steps (default: 100)")
@@ -73,7 +73,7 @@ with tf.Graph().as_default():
         )
         # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        learning_rate = tf.train.exponential_decay(0.001, global_step, decay_steps = 30, decay_rate = 0.9)
+        learning_rate = tf.train.exponential_decay(0.005, global_step, decay_steps = 5, decay_rate = 0.95)
         lr_summary = tf.summary.scalar("learning_rate", learning_rate)
         #learning_rate = 0.002
         optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -83,15 +83,14 @@ with tf.Graph().as_default():
     tr_op_set = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
     print "defined training_ops"
     # Keep track of gradient values and sparsity (optional)
-    grad_summaries = []
-    for g, v in grads_and_vars:
-        if g is not None:
-            print g
-            grad_hist_summary = tf.summary.histogram("%s/grad/hist" % (v.name), g)
-            sparsity_summary = tf.summary.scalar("%s/grad/sparsity" % (v.name), tf.nn.zero_fraction(g))
-            grad_summaries.append(grad_hist_summary)
-            grad_summaries.append(sparsity_summary)
-    grad_summaries_merged = tf.summary.merge(grad_summaries)
+#    grad_summaries = []
+#    for g, v in grads_and_vars:
+#        if g is not None:
+#            grad_hist_summary = tf.summary.histogram("%s/grad/hist" % (v.name), g)
+#            sparsity_summary = tf.summary.scalar("%s/grad/sparsity" % (v.name), tf.nn.zero_fraction(g))
+#            grad_summaries.append(grad_hist_summary)
+#            grad_summaries.append(sparsity_summary)
+#    grad_summaries_merged = tf.summary.merge(grad_summaries)
     print "defined gradient summaries"
     # Output directory for models and summaries
     timestamp = str(int(time.time()))
@@ -106,8 +105,8 @@ with tf.Graph().as_default():
     f1_summary = tf.summary.scalar("F1", siameseModel.f1)
 
     # Train Summaries
-    train_summary_op = tf.summary.merge([lr_summary, loss_summary, acc_summary, grad_summaries_merged, precision_summary, recall_summary, f1_summary])
-    #train_summary_op = tf.summary.merge([lr_summary, loss_summary, acc_summary, grad_summaries_merged])
+#    train_summary_op = tf.summary.merge([lr_summary, loss_summary, acc_summary, grad_summaries_merged, precision_summary, recall_summary, f1_summary])
+    train_summary_op = tf.summary.merge([lr_summary, loss_summary, acc_summary, precision_summary, recall_summary, f1_summary])
     train_summary_dir = os.path.join(out_dir, "summaries", "train")
     train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
@@ -155,9 +154,9 @@ with tf.Graph().as_default():
                 siameseModel.input_y: y_batch,
                 siameseModel.dropout_keep_prob: FLAGS.dropout_keep_prob,
             }
-        _, step, loss, accuracy, dist, sim, summaries, f1 = sess.run([tr_op_set, global_step, siameseModel.loss, siameseModel.accuracy, siameseModel.distance, siameseModel.temp_sim, train_summary_op, siameseModel.f1],  feed_dict)
+        _, step, loss, accuracy, dist, sim, summaries, prec, recall, f1 = sess.run([tr_op_set, global_step, siameseModel.loss, siameseModel.accuracy, siameseModel.distance, siameseModel.temp_sim, train_summary_op, siameseModel.precision, siameseModel.recall, siameseModel.f1],  feed_dict)
         time_str = datetime.datetime.now().isoformat()
-        print "TRAIN %s: step %s, loss %f, acc %f, f1 %f" % (time_str, step, loss, accuracy, f1)
+        print "TRAIN %s: step %s, loss %f, acc %f, prec %f, recall %d, f1 %f" % (time_str, step, loss, accuracy, prec, recall, f1)
         train_summary_writer.add_summary(summaries, step)
         #print y_batch, dist, sim
 

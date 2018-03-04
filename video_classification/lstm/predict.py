@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from siamese_network import SiameseLSTM
-from input_helper import InputHelper
+from input_helper_for_predict import InputHelper
 
 root_dir = "/home/younglittlefat/deep_learning/video_classification"
 tf.app.flags.DEFINE_integer("embedding_dim", 384, "Dimensionality of character embedding (default: 300)")
