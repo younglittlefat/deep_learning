@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-import sklearn
 
 
 class SiameseLSTM(object):
@@ -21,7 +20,7 @@ class SiameseLSTM(object):
             stacked_rnn_fw = []
             for _ in range(n_layers):
                 fw_cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, forget_bias=1.0, state_is_tuple=True)
-                lstm_fw_cell = tf.contrib.rnn.DropoutWrapper(fw_cell, output_keep_prob=dropout)
+                lstm_fw_cell = tf.contrib.rnn.DropoutWrapper(fw_cell, output_keep_prob=dropout, input_keep_prob=dropout)
                 stacked_rnn_fw.append(lstm_fw_cell)
             lstm_fw_cell_m = tf.nn.rnn_cell.MultiRNNCell(cells=stacked_rnn_fw, state_is_tuple=True)
 
@@ -29,7 +28,7 @@ class SiameseLSTM(object):
             stacked_rnn_bw = []
             for _ in range(n_layers):
                 bw_cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, forget_bias=1.0, state_is_tuple=True)
-                lstm_bw_cell = tf.contrib.rnn.DropoutWrapper(bw_cell, output_keep_prob=dropout)
+                lstm_bw_cell = tf.contrib.rnn.DropoutWrapper(bw_cell, output_keep_prob=dropout, input_keep_prob=dropout)
                 stacked_rnn_bw.append(lstm_bw_cell)
             lstm_bw_cell_m = tf.nn.rnn_cell.MultiRNNCell(cells=stacked_rnn_bw, state_is_tuple=True)
         # Get lstm cell output
@@ -44,11 +43,11 @@ class SiameseLSTM(object):
             outputs = tf.nn.bias_add(tf.matmul(outputs[-1], W), b)
         return outputs
 
-    def contrastive_loss(self, y, d, batch_size):
+    def contrastive_loss(self, y, d, reg_cost, batch_size):
         tmp = y * tf.square(d)
         # tmp= tf.mul(y,tf.square(d))
         tmp2 = (1 - y) * tf.square(tf.maximum((1 - d), 0))
-        return tf.reduce_sum(tmp + tmp2) / batch_size / 2
+        return tf.reduce_sum(tmp + tmp2) / batch_size / 2 + reg_cost
 
     def __init__(
             self, sequence_length, embedding_size, hidden_units, l2_reg_lambda, batch_size, img_feat_dim):
@@ -75,7 +74,9 @@ class SiameseLSTM(object):
                                           tf.sqrt(tf.reduce_sum(tf.square(self.out2), 1, keep_dims=True))))
             self.distance = tf.reshape(self.distance, [-1], name="distance")
         with tf.name_scope("loss"):
-            self.loss = self.contrastive_loss(self.input_y, self.distance, batch_size)
+            tv = tf.trainable_variables()
+            regularization_cost = tf.reduce_sum([ tf.nn.l2_loss(v) for v in tv ])
+            self.loss = self.contrastive_loss(self.input_y, self.distance, regularization_cost, batch_size)
         #### Accuracy computation is outside of this class.
         with tf.name_scope("accuracy"):
             self.temp_sim = tf.subtract(tf.ones_like(self.distance), tf.rint(self.distance),
