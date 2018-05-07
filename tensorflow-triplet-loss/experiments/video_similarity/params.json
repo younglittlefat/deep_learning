@@ -1,0 +1,26 @@
+{
+    "learning_rate": 1e-3,
+    "batch_size": 128,
+    "num_epochs": 200,
+
+    "num_channels": 32,
+    "use_batch_norm": false,
+    "bn_momentum": 0.9,
+    "margin": 0.5,
+    "embedding_size": 384,
+    "triplet_strategy": "batch_all",
+    "squared": false,
+
+    "image_size": 28,
+    "num_labels": 10,
+
+    "num_parallel_calls": 4,
+    "save_summary_steps": 50,
+
+    "label_path": "/home/younglittlefat/deep_learning/tensorflow-triplet-loss/data/label",
+    "train_size": 362,
+    "dropout": 0.5,
+    "sequence_length": 30,
+    "hidden_units": 1024
+
+}
